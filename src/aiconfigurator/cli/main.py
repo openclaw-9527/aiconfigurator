@@ -1047,6 +1047,7 @@ def _run_generate_mode(args):
     parallelism = result["parallelism"]
     tp = parallelism["tp"]
     pp = parallelism["pp"]
+    gpus_per_worker = parallelism.get("gpus_per_worker", tp * pp)
     replicas = parallelism["replicas"]
     gpus_used = parallelism["gpus_used"]
 
@@ -1059,7 +1060,7 @@ def _run_generate_mode(args):
     print(f"  Backend:         {args.backend} ({backend_version})")
     print(f"  Total GPUs:      {args.total_gpus} (using {gpus_used})")
     print(f"  Parallelism:     TP={tp}, PP={pp}")
-    print(f"  Replicas:        {replicas} (each using {tp * pp} GPUs)")
+    print(f"  Replicas:        {replicas} (each using {gpus_per_worker} GPUs)")
     print(f"  Max Batch Size:  {generator_params['params']['agg']['max_batch_size']}")
     print(f"  Output:          {output_dir}")
     print("=" * 60)
