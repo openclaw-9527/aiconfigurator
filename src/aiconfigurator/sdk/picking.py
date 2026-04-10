@@ -186,6 +186,7 @@ def pick_default(
     serving_mode: str,
     target_tpot: float | None = None,
     target_request_latency: float | None = None,
+    target_ttft: float | None = None,
     top_n: int = 5,
 ) -> dict[str, Any]:
     """Pick configurations that maximize throughput for a fixed GPU budget.
@@ -201,6 +202,8 @@ def pick_default(
             ``target_request_latency`` is not set.
         target_request_latency: End-to-end request latency SLA in ms.  Takes
             precedence over ``target_tpot`` when set.
+        target_ttft: TTFT SLA target in ms.  When provided, configs exceeding
+            this value are excluded before ranking.
         top_n: Number of top configurations to return.
 
     Returns:
@@ -251,6 +254,7 @@ def pick_default(
             target_request_latency=target_request_latency,
             top_n=top_n,
             group_by=group_by_key,
+            target_ttft=target_ttft,
         )
     else:
         best_config_df = get_best_configs_under_tpot_constraint(
@@ -259,6 +263,7 @@ def pick_default(
             target_tpot=target_tpot,
             top_n=top_n,
             group_by=group_by_key,
+            target_ttft=target_ttft,
         )
 
     best_throughput = float(best_config_df["tokens/s/gpu_cluster"].values[0]) if not best_config_df.empty else 0.0

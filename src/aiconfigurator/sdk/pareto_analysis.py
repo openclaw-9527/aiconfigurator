@@ -572,8 +572,16 @@ def get_best_configs_under_tpot_constraint(
     target_tpot: float,
     top_n: int = 1,
     group_by: str | None = None,
+    target_ttft: float | None = None,
 ) -> pd.DataFrame:
     """TPOT specific convenience wrapper."""
+    # Pre-filter on TTFT if provided so that only configs meeting both
+    # SLA constraints are considered.
+    if target_ttft is not None and pareto_df is not None and not pareto_df.empty and "ttft" in pareto_df.columns:
+        filtered = pareto_df[pareto_df["ttft"] <= target_ttft]
+        if not filtered.empty:
+            pareto_df = filtered
+
     return _get_best_configs_under_constraint(
         total_gpus=total_gpus,
         pareto_df=pareto_df,
@@ -592,8 +600,16 @@ def get_best_configs_under_request_latency_constraint(
     target_request_latency: float,
     top_n: int = 1,
     group_by: str | None = None,
+    target_ttft: float | None = None,
 ) -> pd.DataFrame:
     """Request-latency specific wrapper."""
+    # Pre-filter on TTFT if provided so that only configs meeting both
+    # SLA constraints are considered.
+    if target_ttft is not None and pareto_df is not None and not pareto_df.empty and "ttft" in pareto_df.columns:
+        filtered = pareto_df[pareto_df["ttft"] <= target_ttft]
+        if not filtered.empty:
+            pareto_df = filtered
+
     return _get_best_configs_under_constraint(
         total_gpus=total_gpus,
         pareto_df=pareto_df,

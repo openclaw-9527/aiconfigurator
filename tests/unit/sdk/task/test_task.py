@@ -1017,3 +1017,53 @@ class TestRateMatchingFactorsForwarding:
 
         assert captured.get("rate_matching_prefill_degradation_factor") == 0.85
         assert captured.get("rate_matching_decode_degradation_factor") is None
+
+
+class TestRunAggTpotPassthrough:
+    """run_agg must use the user's TPOT, not a hardcoded sweep."""
+
+    def test_run_agg_uses_user_tpot(self, monkeypatch):
+        """RuntimeConfig passed to agg_pareto should carry the user's TPOT value."""
+        captured = {}
+
+        def capturing_agg_pareto(**kwargs):
+            rc = kwargs.get("runtime_config")
+            captured["tpot"] = rc.tpot
+            return pd.DataFrame({"tokens/s/user": [1.0], "tokens/s/gpu": [0.5]})
+
+        pa_stub = sys.modules["aiconfigurator.sdk.pareto_analysis"]
+        monkeypatch.setattr(pa_stub, "agg_pareto", capturing_agg_pareto)
+
+        task = TaskConfig(
+            serving_mode="agg",
+            model_path="Qwen/Qwen3-32B",
+            system_name="h200_sxm",
+            total_gpus=8,
+            tpot=15.0,
+        )
+        TaskRunner().run(task)
+
+        assert captured["tpot"] == 15.0, "run_agg should pass the user's TPOT value, not a hardcoded sweep"
+
+    def test_run_agg_tpot_is_not_hardcoded_sweep(self, monkeypatch):
+        """RuntimeConfig.tpot must NOT be the old hardcoded 75-value list."""
+        captured = {}
+
+        def capturing_agg_pareto(**kwargs):
+            rc = kwargs.get("runtime_config")
+            captured["tpot"] = rc.tpot
+            return pd.DataFrame({"tokens/s/user": [1.0], "tokens/s/gpu": [0.5]})
+
+        pa_stub = sys.modules["aiconfigurator.sdk.pareto_analysis"]
+        monkeypatch.setattr(pa_stub, "agg_pareto", capturing_agg_pareto)
+
+        task = TaskConfig(
+            serving_mode="agg",
+            model_path="Qwen/Qwen3-32B",
+            system_name="h200_sxm",
+            total_gpus=8,
+        )
+        TaskRunner().run(task)
+
+        hardcoded_sweep = list(range(1, 20, 1)) + list(range(20, 300, 5))
+        assert captured["tpot"] != hardcoded_sweep, "run_agg should NOT use the hardcoded 75-value TPOT sweep"

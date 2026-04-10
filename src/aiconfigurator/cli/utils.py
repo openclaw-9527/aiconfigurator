@@ -54,6 +54,7 @@ def process_experiment_result(
     pareto_df = result["pareto_df"]
     runtime_cfg = task_config.config.runtime_config
     target_tpot = runtime_cfg.tpot
+    target_ttft = getattr(runtime_cfg, "ttft", None)
     target_request_latency = runtime_cfg.request_latency
     use_request_latency = target_request_latency is not None and target_request_latency > 0
     total_gpus = getattr(task_config, "total_gpus", None) or 0
@@ -79,6 +80,7 @@ def process_experiment_result(
             serving_mode=serving_mode,
             target_tpot=target_tpot,
             target_request_latency=target_request_latency,
+            target_ttft=target_ttft,
             top_n=top_n,
         )
 

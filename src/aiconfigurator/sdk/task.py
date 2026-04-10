@@ -1084,7 +1084,7 @@ class TaskRunner:
             osl=task_config.runtime_config.osl,
             prefix=task_config.runtime_config.prefix,
             ttft=task_config.runtime_config.ttft,
-            tpot=list(range(1, 20, 1)) + list(range(20, 300, 5)),
+            tpot=task_config.runtime_config.tpot,
             request_latency=getattr(task_config.runtime_config, "request_latency", None),
         )
         logger.debug("Task %s: Setting up database", task_config.task_name)
@@ -1173,7 +1173,7 @@ class TaskRunner:
             osl=task_config.runtime_config.osl,
             prefix=task_config.runtime_config.prefix,
             ttft=task_config.runtime_config.ttft,
-            tpot=list(range(1, 20, 1)) + list(range(20, 300, 5)),
+            tpot=task_config.runtime_config.tpot,
             request_latency=getattr(task_config.runtime_config, "request_latency", None),
         )
 
