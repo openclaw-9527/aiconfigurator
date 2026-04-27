@@ -1,0 +1,255 @@
+name: "Support Matrix Autofix"
+
+
+# this workflow can be triggered by manual dispatch or API call:
+# curl -X POST \
+# -H "Authorization: Bearer $GITHUB_PAT" \                                                                     
+# -H "Accept: application/vnd.github+json" \                                                                   
+# https://api.github.com/repos/openclaw-9527/aiconfigurator/dispatches \                                       
+# -d '{"event_type":"support-matrix-autofix"}'       
+
+on:
+  workflow_dispatch:
+  repository_dispatch:
+    types: [support-matrix-autofix]
+
+jobs:
+  sync-fork:
+    name: Sync fork with upstream
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Sync fork's main with upstream
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            /repos/${{ github.repository }}/merge-upstream \
+            -f branch=main
+
+  claude-categorize-support-matrix:
+    name: Categorize Support Matrix Regressions
+    needs: sync-fork
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: write
+    outputs:
+      # JSON array of {number, title} for the per-issue fan-out below.
+      items: ${{ steps.plan.outputs.items }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install Claude Code
+        env:
+          # ANTHROPIC_BASE_URL and ANTHROPIC_MODEL are not needed for installation
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: bash .claude/skills/install_claude_code.sh
+
+      - name: Install Dependencies
+        run: pip install pytest pyyaml
+
+      - name: Get Support Matrix Regressions
+        run: python .claude/skills/categorize-issues/get_regressions_from_actions.py -o regressions.csv
+
+      - name: Get Issues
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          GH_HOST: github.com
+        run: python .claude/skills/categorize-issues/regression_issue.py pull -o issues.yaml
+
+      - name: Categorize Issues
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
+          ANTHROPIC_MODEL: ${{ secrets.ANTHROPIC_MODEL }}
+          CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS: 1
+        run: |
+          set -o pipefail
+          claude -p \
+            "/match-or-create-issue Use the skill \`match-or-create-issue\` to categorize the support matrix regressions in ./regressions.csv, update the csv file for creation of issues." \
+            --permission-mode bypassPermissions \
+            </dev/null 2>&1 | tee claude.log
+          python -m pytest .claude/skills/categorize-issues/test_issues_regressions.py -v
+
+      - name: Create or Update Issues
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          GH_HOST: github.com
+        # `--update-input` rewrites issues.yaml in place, replacing every
+        # TBD_<n> placeholder with the real GitHub issue number that was
+        # just allocated. The next step needs those real numbers.
+        run: python .claude/skills/categorize-issues/regression_issue.py push -i issues.yaml --update-input
+
+      - name: Plan per-issue fan-out
+        id: plan
+        # Emit a compact JSON array of {number, title} for every regression
+        # issue that still has failed_cases. This becomes the `matrix` source
+        # for the `claude-fix-issues` job below.
+        run: |
+          items=$(python -c "
+          import json, yaml
+          data = yaml.safe_load(open('issues.yaml')) or []
+          out = []
+          for d in data:
+              if not d.get('failed_cases'):
+                  continue
+              iid = d.get('issue_id')
+              if isinstance(iid, int) or (isinstance(iid, str) and iid.isdigit()):
+                  out.append({'number': int(iid), 'title': d.get('title', '')})
+          print(json.dumps(out))
+          ")
+          echo "items=$items" >> "$GITHUB_OUTPUT"
+          echo "Planned $(python -c 'import json,sys;print(len(json.loads(sys.argv[1])))' "$items") issue(s) to fix."
+
+      - name: Upload categorize artifacts
+        # Run even on prior-step failure so we can debug whatever state the
+        # files were left in. Missing files are tolerated so an early failure
+        # (before regressions.csv exists) still uploads whatever does exist.
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: categorize-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            regressions.csv
+            issues.yaml
+          if-no-files-found: warn
+          retention-days: 14
+
+  claude-fix-issues:
+    name: "Fix issue #${{ matrix.item.number }}: ${{ matrix.item.title }}"
+    needs: claude-categorize-support-matrix
+    # Skip the whole fan-out job when there is nothing to do.
+    if: ${{ needs.claude-categorize-support-matrix.outputs.items != '' && needs.claude-categorize-support-matrix.outputs.items != '[]' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    strategy:
+      # One failing issue should not cancel the others.
+      fail-fast: false
+      matrix:
+        item: ${{ fromJSON(needs.claude-categorize-support-matrix.outputs.items) }}
+    # Ensure at most one in-flight runner per issue across all workflow runs.
+    concurrency:
+      group: fix-issue-${{ matrix.item.number }}
+      cancel-in-progress: false
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install Claude Code
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: bash .claude/skills/install_claude_code.sh
+
+      - name: Install Dependencies
+        run: pip install -e . 
+
+      - name: Annotate run summary
+        run: |
+          {
+            echo "## Fixing issue [#${{ matrix.item.number }}](${{ github.server_url }}/${{ github.repository }}/issues/${{ matrix.item.number }})"
+            echo ""
+            echo "**Title:** ${{ matrix.item.title }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: "Fix issue #${{ matrix.item.number }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          GH_HOST: github.com
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
+          ANTHROPIC_MODEL: ${{ secrets.ANTHROPIC_MODEL }}
+          CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS: 1
+        run: |
+          set -o pipefail
+          echo "Working on #${{ matrix.item.number }} — ${{ matrix.item.title }}"
+          # Regression fixes may need local test runs or commit history inspection.
+          claude -p \
+            "/fix-regression Use the skill 'fix-regression' to address GitHub issue #${{ matrix.item.number }} on ${GH_REPO}. \
+            Make sure to checkout to the correct branch that the issue is associated to. Write a LOG.md file as instructed." \
+            --permission-mode bypassPermissions \
+            </dev/null 2>&1 | tee fix-issue.log
+
+      - name: Upload per-issue log
+        # Upload even on failure so we can debug the exact state Claude left behind.
+        # The artifact name embeds the issue number so each matrix child writes to a
+        # distinct artifact (upload-artifact@v4 errors on duplicate names).
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: fix-issue-${{ matrix.item.number }}
+          path: LOG.md
+          if-no-files-found: warn
+          retention-days: 14
+
+  report:
+    name: Generate Report and Learnings
+    needs: claude-fix-issues
+    # Run even if some matrix children failed, and even if the fan-out job was skipped.
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        # Needed so the Install Claude Code step can run .claude/skills/install_claude_code.sh.
+        uses: actions/checkout@v4
+
+      - name: Download per-issue logs
+        uses: actions/download-artifact@v4
+        with:
+          pattern: fix-issue-*
+          path: logs
+
+      - name: Count per-issue logs
+        id: stage
+        # Just expose a count so the Claude steps can be skipped on an empty run.
+        # Claude reads the per-issue LOG.md files directly from logs/ — no
+        # concatenation step.
+        run: |
+          shopt -s nullglob
+          logs=(logs/fix-issue-*/LOG.md)
+          echo "count=${#logs[@]}" >> "$GITHUB_OUTPUT"
+          echo "Found ${#logs[@]} per-issue log file(s)."
+
+      - name: Install Claude Code
+        if: ${{ steps.stage.outputs.count != '0' }}
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: bash .claude/skills/install_claude_code.sh
+
+      - name: Generate Report and Slack Notification with Claude
+        if: ${{ steps.stage.outputs.count != '0' }}
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
+          ANTHROPIC_MODEL: ${{ secrets.ANTHROPIC_MODEL }}
+          CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS: 1
+        run: |
+          set -o pipefail
+          # Read-only summarization plus one Write for ./REPORT.md.
+          claude -p \
+            "/report-regresion-fix-and-learn Read every ./logs/fix-issue-<n>/LOG.md \
+            file in the current workspace (each is one matrix child of a support-matrix autofix run; \
+            <n> is the GitHub issue number). Produce a concise Markdown report at \
+            ./REPORT.md with skill `report-regresion-fix-and-learn`" \
+            --permission-mode bypassPermissions \
+            </dev/null 2>&1 | tee report.log
+
+      - name: Upload report artifact
+        if: ${{ always() && steps.stage.outputs.count != '0' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: REPORT.md
+          if-no-files-found: warn
+          retention-days: 14

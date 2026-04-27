@@ -21,3 +21,16 @@ env/
 *.pyc
 *.pyo
 *.pyd
+
+
+# Include Claude Code rules and skills even if a user-global gitignore excludes .claude/.
+# Order matters: each ancestor directory must be un-ignored before its children can be.
+!.claude/
+.claude/*
+!.claude/rules/
+!.claude/rules/**
+!.claude/skills/
+!.claude/skills/**
+# Stop the broad un-ignore above from re-adding bytecode dirs/files under .claude/skills/.
+.claude/**/__pycache__/
+.claude/**/*.py[cod]
