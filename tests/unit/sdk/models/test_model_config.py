@@ -12,7 +12,7 @@ from unittest.mock import patch
 import pytest
 
 from aiconfigurator.sdk import common, config, models
-from aiconfigurator.sdk.models import check_is_moe, get_model, get_model_family
+from aiconfigurator.sdk.models import check_is_moe, get_model, get_model_family, is_fp8_block_moe_shardable
 from aiconfigurator.sdk.utils import get_model_config_from_model_path
 
 pytestmark = pytest.mark.unit
@@ -374,6 +374,42 @@ class TestMOEModelFP8BlockQuantizationValidation:
         else:
             model = get_model("Qwen/Qwen3-235B-A22B", model_config, "trtllm")
             assert model is not None
+
+
+class TestIsFp8BlockMoeShardable:
+    """Tests for the module-level is_fp8_block_moe_shardable helper."""
+
+    @pytest.mark.parametrize(
+        "moe_quant_mode,moe_inter_size,moe_tp_size,weight_block_size,expected",
+        [
+            # 1536 / 4 = 384, 384 % 128 == 0
+            (common.MoEQuantMode.fp8_block, 1536, 4, [128, 128], True),
+            # 1536 / 8 = 192, 192 % 128 != 0
+            (common.MoEQuantMode.fp8_block, 1536, 8, [128, 128], False),
+            # 768 / 2 = 384, aligned
+            (common.MoEQuantMode.fp8_block, 768, 2, [128, 128], True),
+            # 768 / 4 = 192, not aligned
+            (common.MoEQuantMode.fp8_block, 768, 4, [128, 128], False),
+            # Non-fp8_block always shardable
+            (common.MoEQuantMode.bfloat16, 768, 4, [128, 128], True),
+            (common.MoEQuantMode.fp8, 1536, 8, [128, 128], True),
+        ],
+    )
+    @patch("aiconfigurator.sdk.models._load_model_config_from_model_path")
+    def test_shardability(
+        self,
+        mock_load_config,
+        moe_quant_mode,
+        moe_inter_size,
+        moe_tp_size,
+        weight_block_size,
+        expected,
+    ):
+        mock_load_config.return_value = {"quantization_config": {"weight_block_size": weight_block_size}}
+        assert (
+            is_fp8_block_moe_shardable("Qwen/Qwen3-235B-A22B", moe_quant_mode, moe_inter_size, moe_tp_size)
+            is expected
+        )
 
 
 class TestGetModelMOESGLangDispatch:

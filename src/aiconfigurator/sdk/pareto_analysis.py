@@ -15,11 +15,51 @@ from aiconfigurator.sdk import config
 from aiconfigurator.sdk.backends.factory import get_backend
 from aiconfigurator.sdk.common import ColumnsAgg
 from aiconfigurator.sdk.inference_session import DisaggInferenceSession, InferenceSession
-from aiconfigurator.sdk.models import get_model
+from aiconfigurator.sdk.models import get_model, is_fp8_block_moe_shardable
 from aiconfigurator.sdk.perf_database import PerfDatabase
-from aiconfigurator.sdk.utils import enumerate_ttft_tpot_constraints, strip_unicode_to_ascii
+from aiconfigurator.sdk.utils import (
+    enumerate_ttft_tpot_constraints,
+    get_model_config_from_model_path,
+    strip_unicode_to_ascii,
+)
 
 logger = logging.getLogger(__name__)
+
+
+def _filter_fp8_block_moe_shardable_configs(
+    parallel_config_list: list[list[int]],
+    model_path: str,
+    model_config: config.ModelConfig,
+) -> list[list[int]]:
+    """Drop parallel configs whose moe_tp_size breaks FP8 block quantization alignment.
+
+    Keeps the sweep focused on configs the backend can actually load. Non-MoE models or
+    non-fp8_block quantization pass through unchanged.
+    """
+    try:
+        resolved = get_model_config_from_model_path(model_path)
+    except Exception:  # pragma: no cover
+        return parallel_config_list
+    moe_inter_size = resolved.get("moe_inter_size", 0) or 0
+    if not moe_inter_size:
+        return parallel_config_list
+    filtered = []
+    dropped: set[int] = set()
+    for cfg in parallel_config_list:
+        _tp, _pp, _dp, moe_tp, _moe_ep = cfg
+        if is_fp8_block_moe_shardable(model_path, model_config.moe_quant_mode, moe_inter_size, moe_tp):
+            filtered.append(cfg)
+        else:
+            dropped.add(moe_tp)
+    if dropped:
+        logger.info(
+            "Skipping %d parallel config(s) with moe_tp_size in %s: (moe_intermediate_size=%d "
+            "is not divisible by weight_block_size * moe_tp_size for FP8 block quantization).",
+            len(parallel_config_list) - len(filtered),
+            sorted(dropped),
+            moe_inter_size,
+        )
+    return filtered
 
 
 def agg_pareto(
@@ -58,6 +98,9 @@ def agg_pareto(
     exceptions = []
     all_configs_oom = True
     all_kv_cache_oom = True
+    parallel_config_list = _filter_fp8_block_moe_shardable_configs(
+        parallel_config_list, model_path, model_config
+    )
     for parallel_config in parallel_config_list:
         tp_size, pp_size, dp_size, moe_tp_size, moe_ep_size = parallel_config
         logger.debug(
@@ -247,6 +290,13 @@ def disagg_pareto(
             else:
                 logger.debug(f"no constraint on {working_list}")
         return working_list
+
+    prefill_parallel_config_list = _filter_fp8_block_moe_shardable_configs(
+        prefill_parallel_config_list, model_path, prefill_model_config
+    )
+    decode_parallel_config_list = _filter_fp8_block_moe_shardable_configs(
+        decode_parallel_config_list, model_path, decode_model_config
+    )
 
     prefill_backend = get_backend(prefill_backend_name)
     decode_backend = get_backend(decode_backend_name)
