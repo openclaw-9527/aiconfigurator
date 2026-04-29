@@ -961,6 +961,10 @@ class TaskConfig:
 
         enable_wideep = bool(getattr(self.config, "enable_wideep", self.enable_wideep))
         moe_backend = getattr(self.config, "moe_backend", None)
+        try:
+            model_is_moe = check_is_moe(self.model_path)
+        except Exception:
+            model_is_moe = False
 
         # DeepSeek uses MLA perf tables; others use attention perf tables.
         # vLLM absorbs MLA KV projections into standard attention kernels, so it
@@ -989,15 +993,20 @@ class TaskConfig:
             gemm_mode = _to_name(_get_cfg_value(wc, "gemm_quant_mode"))
             _supported_or_raise("gemm", gemm_mode)
 
-            moe_mode = _to_name(_get_cfg_value(wc, "moe_quant_mode"))
-            wc_moe_backend = getattr(wc, "moe_backend", None) or moe_backend
-            if self.backend_name == "sglang" and wc_moe_backend == "deepep_moe":
-                if validate_context:
-                    _supported_or_raise("wideep_context_moe", moe_mode)
-                if validate_generation:
-                    _supported_or_raise("wideep_generation_moe", moe_mode)
-            else:
-                _supported_or_raise("moe", moe_mode)
+            # Skip MoE validation for dense models: moe_quant_mode is inferred
+            # from the HF quant_algo even when the model has no MoE layers, so
+            # it would otherwise wrongly reject dense fp8 models on systems
+            # whose moe perf table doesn't include that dtype.
+            if model_is_moe:
+                moe_mode = _to_name(_get_cfg_value(wc, "moe_quant_mode"))
+                wc_moe_backend = getattr(wc, "moe_backend", None) or moe_backend
+                if self.backend_name == "sglang" and wc_moe_backend == "deepep_moe":
+                    if validate_context:
+                        _supported_or_raise("wideep_context_moe", moe_mode)
+                    if validate_generation:
+                        _supported_or_raise("wideep_generation_moe", moe_mode)
+                else:
+                    _supported_or_raise("moe", moe_mode)
 
             if validate_context:
                 fmha_mode = _to_name(_get_cfg_value(wc, "fmha_quant_mode"))

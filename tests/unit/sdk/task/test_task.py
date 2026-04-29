@@ -457,6 +457,68 @@ def test_taskconfig_quant_merge_uses_model_info_when_missing(monkeypatch):
         )
 
 
+def test_taskconfig_skips_moe_validation_for_dense_model(monkeypatch):
+    # Regression test: a dense fp8 Llama inherits moe_quant_mode=fp8 from the
+    # HF quant_algo but never runs the MoE op. It must not be rejected just
+    # because the moe perf table lacks fp8 rows.
+    class FakeDatabase:
+        def __init__(self):
+            self.system_spec = {"gpu": {"sm_version": 90}}
+            self.supported_quant_mode = {
+                "gemm": ["bfloat16", "fp8"],
+                "moe": ["bfloat16"],
+                "context_attention": ["bfloat16"],
+                "generation_attention": ["bfloat16", "fp8"],
+            }
+
+    def fake_get_database(system, backend, version):
+        return FakeDatabase()
+
+    def fake_model_info(_path):
+        return {
+            "raw_config": {"quant_algo": "fp8", "quant_dynamic": True},
+            "architecture": "LlamaForCausalLM",
+        }
+
+    monkeypatch.setattr(task_module, "get_database", fake_get_database)
+    monkeypatch.setattr(task_module, "get_model_config_from_model_path", fake_model_info)
+
+    TaskConfig(
+        serving_mode="agg",
+        model_path="nvidia/Llama-3.1-70B-Instruct-FP8",
+        system_name="b60",
+        backend_name="vllm",
+        backend_version="0.12.0",
+    )
+
+
+def test_taskconfig_still_validates_moe_for_moe_model(monkeypatch):
+    class FakeDatabase:
+        def __init__(self):
+            self.system_spec = {"gpu": {"sm_version": 90}}
+            self.supported_quant_mode = {
+                "gemm": ["bfloat16", "fp8"],
+                "moe": ["bfloat16"],
+                "context_attention": ["bfloat16"],
+                "generation_attention": ["bfloat16", "fp8"],
+            }
+
+    def fake_get_database(system, backend, version):
+        return FakeDatabase()
+
+    monkeypatch.setattr(task_module, "get_database", fake_get_database)
+
+    with pytest.raises(ValueError, match=r"Unsupported moe quant mode 'fp8'"):
+        TaskConfig(
+            serving_mode="agg",
+            model_path="Qwen/Qwen3-30B-A3B-FP8",
+            system_name="b60",
+            backend_name="vllm",
+            backend_version="0.12.0",
+            profiles=["fp8"],
+        )
+
+
 def test_taskconfig_quant_merge_preserves_explicit_values(monkeypatch):
     class FakeDatabase:
         def __init__(self):
