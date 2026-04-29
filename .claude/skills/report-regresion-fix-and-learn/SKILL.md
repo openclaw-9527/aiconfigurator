@@ -57,4 +57,4 @@ Illustrate what are the lessons you learned that could benefit you if you run th
 -->
 ```
 7. Make sure the REPORT.md is present
-8. For each skills used in `.claude/skills`, create or update a `MEMORY.md` file with the "## Lessons Learned" section you wrote. Commit and push to `agentic-workflow` branch.
+8. For each skills used in `.claude/skills`, create or update a `MEMORY.md` file with the "## Lessons Learned" section you wrote. Create a PR to `agentic-workflow` with these changes.

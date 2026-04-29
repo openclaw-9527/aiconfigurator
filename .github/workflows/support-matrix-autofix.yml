@@ -234,6 +234,7 @@ jobs:
           ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
           ANTHROPIC_MODEL: ${{ secrets.ANTHROPIC_MODEL }}
           CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS: 1
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
           set -o pipefail
           # Read-only summarization plus one Write for ./REPORT.md.
