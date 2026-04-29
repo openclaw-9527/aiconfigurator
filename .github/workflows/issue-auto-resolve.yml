@@ -1,0 +1,84 @@
+name: issue-auto-resolve
+
+on:
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: "Issue or pull request number to resolve"
+        required: true
+        type: string
+      comment_url:
+        description: "Optional URL of the comment to respond to"
+        required: false
+        type: string
+      comment_id:
+        description: "Optional GitHub issue comment ID to respond to"
+        required: false
+        type: string
+
+jobs:
+  claude-issue-auto-resolve:
+    name: "Resolve feedback for #${{ github.event.issue.number || inputs.issue_number }}"
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.comment.user.type != 'Bot' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    concurrency:
+      group: issue-auto-resolve-${{ github.event.issue.number || inputs.issue_number }}
+      cancel-in-progress: false
+    env:
+      ISSUE_NUMBER: ${{ github.event.issue.number || inputs.issue_number }}
+      COMMENT_ID: ${{ github.event.comment.id || inputs.comment_id }}
+      COMMENT_URL: ${{ github.event.comment.html_url || inputs.comment_url }}
+      COMMENT_API_URL: ${{ github.event.comment.url }}
+      COMMENT_AUTHOR: ${{ github.event.comment.user.login || github.actor }}
+      IS_PR: ${{ github.event.issue.pull_request && 'true' || 'false' }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+        
+      - name: Install Claude Code
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: bash .claude/skills/install_claude_code.sh
+
+      - name: Install Dependencies
+        run: pip install -e .
+
+      - name: Respond to issue or PR feedback
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          GH_HOST: github.com
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
+          ANTHROPIC_MODEL: ${{ secrets.ANTHROPIC_MODEL }}
+          CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS: 1
+        run: |
+          set -o pipefail
+          echo "Responding to feedback on #${ISSUE_NUMBER}"
+          claude -p \
+            "/fix-regression Use the skill 'fix-regression' to respond to the comment that triggered this workflow on GitHub issue or pull request #${ISSUE_NUMBER} in ${GH_REPO}. \
+            Triggering comment URL: ${COMMENT_URL:-not provided}. Triggering comment ID: ${COMMENT_ID:-not provided}. Triggering comment API URL: ${COMMENT_API_URL:-not provided}. \
+            Read that exact triggering comment with gh before making changes, then read the surrounding GitHub thread or PR for context. \
+            Do not assume the newest comment in the thread is the triggering comment. \
+            Treat the triggering comment as fresh feedback on a regression fix: if code changes are needed, update or create the appropriate PR; \
+            if no code change is needed, update the issue or PR with a concise response. \
+            Make sure to checkout the correct branch that the issue or PR is associated with. Write a LOG.md file as instructed." \
+            --permission-mode bypassPermissions \
+            </dev/null 2>&1 | tee issue-auto-resolve.log
+
+      - name: Upload resolver artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: issue-auto-resolve-${{ github.event.issue.number || inputs.issue_number }}
+          path: |
+            issue-auto-resolve.log
+            LOG.md
+          if-no-files-found: warn
+          retention-days: 14

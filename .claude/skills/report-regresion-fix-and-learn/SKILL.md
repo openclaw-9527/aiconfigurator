@@ -13,22 +13,30 @@ Before this task, there was a huge amount of effort that was done in fixing the 
 
 1. If a `MEMORY.md` file exists in the same folder of this `SKILL.md`, read that memory first.
 2. Read through all `LOG.md` presented.
-3. Generate a Slack message json body. Create a `notification.json` file with the following content
+3. Generate a Slack incoming-webhook JSON body. Create a `notification.json` file that Slack can post directly.
+Use this exact payload structure:
 ```json
 {
-    "title": "Autofix Run Notification [<GitHub_RUN_ID>](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})",
+    "title": "Autofix Run Notification [${GITHUB_RUN_ID}]",
     "summary": "<one line summary>",
     "pics": "<list all the emails of PIC, such as 'person_a@nvidia.com, person_b@nvidia.com'>",
-    "details": "<a full multiline paragraph to summarize the issues and PRs, see example below"
+    "details": "<a full multiline paragraph to summarize the issues and PRs, see example below>"
 }
 ```
 Example for details:
 ```plaintext
-1️⃣ Issue (#11)[https://github.com/openclaw-9527/aiconfigurator/issues/11]. b60/vllm/0.12.0 rejects FP8 MoE quant mode (supported modes: ['float16']). PR [#7](https://github.com/openclaw-9527/aiconfigurator/pull/12) created/updated. cc person_a@nvidia.com person_b@nvidia.com
-2️⃣ Issue (#10)[https://github.com/openclaw-9527/aiconfigurator/issues/10]. Custom allreduce perf data missing for tp_size=16 on gb200 (Llama-3.1-405B) created/updated cc person_a@nvidia.com person_c@nvidia.com
+1. Issue #11: b60/vllm/0.12.0 rejects FP8 MoE quant mode (supported modes: ['float16']).\n
+· Issue: https://github.com/openclaw-9527/aiconfigurator/issues/10\n
+· PR: https://github.com/openclaw-9527/aiconfigurator/pull/11
+cc person_a@nvidia.com person_b@nvidia.com\n
+\n\n
+2. Issue #10
+· Custom allreduce perf data missing for tp_size=16 on gb200 (Llama-3.1-405B)
+· Issue: https://github.com/openclaw-9527/aiconfigurator/issues/10
+cc person_a@nvidia.com person_c@nvidia.com
 ```
-4. Make sure that all the links above exists, if not, modify the json
-5. Send the json payload to `SLACK_WEBHOOK_URL` env var
+4. Make sure that all the links above exist. If a link does not exist, remove or correct it before sending. Keep the payload structure exactly as shown above.
+5. Send the json payload to `SLACK_WEBHOOK_URL` env var (if no issue/pr updates, do not send it)
 6. Generate a `REPORT.md` based on the following template
 ```markdown
 # Autofix Run Report
