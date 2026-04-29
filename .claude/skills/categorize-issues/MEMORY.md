@@ -1,0 +1,12 @@
+# Memory: categorize-issues
+
+## Lessons Learned (from autofix run 25088054829)
+
+1. **`FailedBranch` values in auto-generated CSVs are unreliable.** Four of five issues in this batch cited `release/0.8.0`, a branch that never existed on origin. Any categorizer that groups by branch will split real duplicates across buckets. Normalize to a canonical "latest main or latest existing release/*" before clustering.
+2. **`support_matrix.csv` lags reality by weeks.** Treat it as a hint, not ground truth. The CSV can show FAIL for a row that `run_single_test` reports as PASS on current main (issues #27, #29, #30 were all green-on-main). When categorizing, flag rows where the CSV and `run_single_test` disagree -- they are often stale filings that should be closed, not categorized.
+3. **Distinct symptoms can share a root cause.** Issues #26 (`Invalid quantized MoE configuration`) and #30 (`IndexError: list index out of range` in `query_moe`) surface in different code paths but both stem from insufficient shape validation in `perf_database.py`. A good categorizer groups by *root cause in the pipeline stage*, not only by the top-line error string.
+4. **Enum renames rot error traces.** `MoEQuantMode.float16` was renamed to `bfloat16` in #895; traces in earlier issues still quote the old name. Matching on enum values without a rename map will miss duplicates. Maintain a renames/aliases file for the enum strings the error-trace matcher keys off.
+5. **LFS placeholders produce a misleading `AttributeError: NoneType.query_mem_op`** that looks like a totally separate bug family. If the categorizer sees that symptom, treat it as "LFS not pulled" and exclude before matching -- otherwise it becomes a growing category of fake duplicates.
+6. **One failing-config report frequently means one bug, not N bugs.** Issue #26 listed three models and 18 (model x system x backend x mode) rows; they are all the same fp8_block MoE alignment root cause. Cluster on (validator/query function, error-string normalized) rather than on (model, system, backend, version) 4-tuples.
+7. **"Branch doesn't exist on origin" is a useful pre-filter.** If `FailedBranch` is not in `git branch -r`, downgrade the row's confidence before categorizing; many such rows self-resolve once you verify on main.
+8. **Issue template fields to prioritize when matching:** error string (normalized for enum renames), failing `query_*` / validator function in the traceback, `system` x `backend` pair. Deprioritize `model` (many models hit the same root cause) and `FailedBranch` (often wrong).
