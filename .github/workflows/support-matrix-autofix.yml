@@ -43,7 +43,7 @@ jobs:
       items: ${{ steps.plan.outputs.items }}
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install Claude Code
         env:
@@ -114,7 +114,7 @@ jobs:
         # files were left in. Missing files are tolerated so an early failure
         # (before regressions.csv exists) still uploads whatever does exist.
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: categorize-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
@@ -144,7 +144,7 @@ jobs:
       cancel-in-progress: false
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install Claude Code
         env:
@@ -186,7 +186,7 @@ jobs:
         # The artifact name embeds the issue number so each matrix child writes to a
         # distinct artifact (upload-artifact@v4 errors on duplicate names).
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fix-issue-${{ matrix.item.number }}
           path: LOG.md
@@ -202,10 +202,10 @@ jobs:
     steps:
       - name: Checkout repo
         # Needed so the Install Claude Code step can run .claude/skills/install_claude_code.sh.
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Download per-issue logs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           pattern: fix-issue-*
           path: logs
@@ -247,7 +247,7 @@ jobs:
 
       - name: Upload report artifact
         if: ${{ always() && steps.stage.outputs.count != '0' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: report-${{ github.run_id }}-${{ github.run_attempt }}
           path: REPORT.md
