@@ -43,6 +43,62 @@ def _load_json_with_infinity(file_path) -> dict:
     return json.loads(content)
 
 
+def filter_fp8_block_moe_configs(
+    parallel_config_list: list[list[int]],
+    model_path: str,
+) -> list[list[int]]:
+    """Drop parallel configs where ``moe_intermediate_size / moe_tp_size`` is not a
+    multiple of the fp8_block ``weight_block_size``.
+
+    For fp8_block quantized MoE models, the per-GPU MoE intermediate slice must
+    be block-aligned (see ``MOEModel._validate_fp8_block_quantized_moe_config``).
+    Pre-filtering known-invalid ``moe_tp_size`` values avoids spurious
+    ``ValueError`` entries during the Pareto sweep and lets callers produce a
+    meaningful error when no candidate survives.
+
+    Returns the list unchanged if the model is not fp8_block MoE or if the raw
+    config cannot be inspected.
+    """
+    try:
+        raw_config = _load_model_config_from_model_path(model_path)
+    except Exception:
+        return parallel_config_list
+
+    quant_method = raw_config.get("quantization_config", {}).get("quant_method")
+    if quant_method != "fp8":
+        return parallel_config_list
+
+    moe_inter_size = raw_config.get("moe_intermediate_size") or raw_config.get("intermediate_size")
+    if not moe_inter_size:
+        return parallel_config_list
+
+    weight_block_size_pair = raw_config.get("quantization_config", {}).get("weight_block_size")
+    if not weight_block_size_pair:
+        return parallel_config_list
+    weight_block_size = weight_block_size_pair[0]
+
+    filtered = []
+    dropped = []
+    for cfg in parallel_config_list:
+        moe_tp = cfg[3]
+        moe_size_per_gpu = moe_inter_size // moe_tp
+        if moe_tp <= 0 or (moe_size_per_gpu % weight_block_size) != 0:
+            dropped.append(cfg)
+            continue
+        filtered.append(cfg)
+
+    if dropped:
+        logger.debug(
+            "Dropped %d parallel config(s) violating fp8_block alignment "
+            "(moe_intermediate_size=%d, weight_block_size=%d): %s",
+            len(dropped),
+            moe_inter_size,
+            weight_block_size,
+            dropped,
+        )
+    return filtered
+
+
 def filter_real_silicon_configs(
     parallel_config_list: list[list[int]],
     *,

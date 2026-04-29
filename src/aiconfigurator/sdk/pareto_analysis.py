@@ -17,7 +17,11 @@ from aiconfigurator.sdk.common import ColumnsAgg
 from aiconfigurator.sdk.inference_session import DisaggInferenceSession, InferenceSession
 from aiconfigurator.sdk.models import get_model
 from aiconfigurator.sdk.perf_database import PerfDatabase
-from aiconfigurator.sdk.utils import enumerate_ttft_tpot_constraints, strip_unicode_to_ascii
+from aiconfigurator.sdk.utils import (
+    enumerate_ttft_tpot_constraints,
+    filter_fp8_block_moe_configs,
+    strip_unicode_to_ascii,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +62,7 @@ def agg_pareto(
     exceptions = []
     all_configs_oom = True
     all_kv_cache_oom = True
+    parallel_config_list = filter_fp8_block_moe_configs(parallel_config_list, model_path)
     for parallel_config in parallel_config_list:
         tp_size, pp_size, dp_size, moe_tp_size, moe_ep_size = parallel_config
         logger.debug(
@@ -247,6 +252,9 @@ def disagg_pareto(
             else:
                 logger.debug(f"no constraint on {working_list}")
         return working_list
+
+    prefill_parallel_config_list = filter_fp8_block_moe_configs(prefill_parallel_config_list, model_path)
+    decode_parallel_config_list = filter_fp8_block_moe_configs(decode_parallel_config_list, model_path)
 
     prefill_backend = get_backend(prefill_backend_name)
     decode_backend = get_backend(decode_backend_name)

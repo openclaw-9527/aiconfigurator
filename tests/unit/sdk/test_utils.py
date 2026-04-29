@@ -17,6 +17,7 @@ from aiconfigurator.sdk.utils import (
     _parse_hf_config_json,
     enumerate_parallel_config,
     enumerate_ttft_tpot_constraints,
+    filter_fp8_block_moe_configs,
     get_model_config_from_model_path,
 )
 
@@ -949,3 +950,64 @@ class TestEnumerateParallelConfigVLLMMoE:
         )
         has_pure_ep = any(c[3] == 1 and c[4] > 1 for c in configs)
         assert has_pure_ep, "Should include pure MoE EP configs (moe_tp=1, moe_ep>1)"
+
+
+class TestFilterFp8BlockMoeConfigs:
+    """Tests for filter_fp8_block_moe_configs, which drops parallel configs whose
+    ``moe_intermediate_size / moe_tp_size`` slice is not block-aligned."""
+
+    def _patch_raw_config(self, raw_config):
+        return patch(
+            "aiconfigurator.sdk.utils._load_model_config_from_model_path",
+            return_value=raw_config,
+        )
+
+    def test_drops_moe_tp_8_for_inter_1536(self):
+        """moe_tp=8 produces 192 which is not a multiple of 128."""
+        raw = {
+            "moe_intermediate_size": 1536,
+            "quantization_config": {"quant_method": "fp8", "weight_block_size": [128, 128]},
+        }
+        configs = [[1, 1, 1, 1, 1], [1, 1, 2, 2, 1], [1, 1, 4, 4, 1], [1, 1, 8, 8, 1]]
+        with self._patch_raw_config(raw):
+            filtered = filter_fp8_block_moe_configs(configs, model_path="fake/model")
+        moe_tp_values = sorted({c[3] for c in filtered})
+        assert moe_tp_values == [1, 2, 4], moe_tp_values
+
+    def test_drops_moe_tp_4_and_8_for_inter_768(self):
+        """moe_tp=4 (192) and moe_tp=8 (96) both fail alignment."""
+        raw = {
+            "moe_intermediate_size": 768,
+            "quantization_config": {"quant_method": "fp8", "weight_block_size": [128, 128]},
+        }
+        configs = [[1, 1, 1, 1, 1], [1, 1, 2, 2, 1], [1, 1, 4, 4, 1], [1, 1, 8, 8, 1]]
+        with self._patch_raw_config(raw):
+            filtered = filter_fp8_block_moe_configs(configs, model_path="fake/model")
+        moe_tp_values = sorted({c[3] for c in filtered})
+        assert moe_tp_values == [1, 2], moe_tp_values
+
+    def test_noop_when_not_fp8_block(self):
+        """Non-fp8 quantized models pass through unchanged."""
+        raw = {"moe_intermediate_size": 1536, "quantization_config": {"quant_method": "gptq"}}
+        configs = [[1, 1, 1, 1, 1], [1, 1, 8, 8, 1]]
+        with self._patch_raw_config(raw):
+            filtered = filter_fp8_block_moe_configs(configs, model_path="fake/model")
+        assert filtered == configs
+
+    def test_noop_when_weight_block_size_missing(self):
+        """fp8 configs without explicit weight_block_size are passed through."""
+        raw = {"moe_intermediate_size": 1536, "quantization_config": {"quant_method": "fp8"}}
+        configs = [[1, 1, 1, 1, 1], [1, 1, 8, 8, 1]]
+        with self._patch_raw_config(raw):
+            filtered = filter_fp8_block_moe_configs(configs, model_path="fake/model")
+        assert filtered == configs
+
+    def test_noop_when_config_load_raises(self):
+        """Loader failures should not break the sweep."""
+        configs = [[1, 1, 1, 1, 1]]
+        with patch(
+            "aiconfigurator.sdk.utils._load_model_config_from_model_path",
+            side_effect=RuntimeError("boom"),
+        ):
+            filtered = filter_fp8_block_moe_configs(configs, model_path="fake/model")
+        assert filtered == configs
