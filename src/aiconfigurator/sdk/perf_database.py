@@ -5410,6 +5410,13 @@ class PerfDatabase:
                     moe_dict = moe_data[quant_mode][used_workload_distribution][topk][num_experts][hidden_size][
                         inter_size
                     ][moe_tp_size][moe_ep_size]
+                    if not moe_dict:
+                        raise PerfDataNotAvailableError(
+                            f"MoE perf data missing for system='{self.system}', backend='{self.backend}', "
+                            f"version='{self.version}', quant_mode={quant_mode}, "
+                            f"shape=[hidden={hidden_size}, inter={inter_size}, topk={topk}, "
+                            f"num_experts={num_experts}], moe_tp={moe_tp_size}, moe_ep={moe_ep_size}."
+                        )
                     token_points = sorted(moe_dict.keys())
                     if num_tokens_corrected > token_points[-1]:
                         return _estimate_overflow_with_last_token_util(
@@ -5493,6 +5500,13 @@ class PerfDatabase:
                         moe_dict = self._moe_data[quant_mode][used_workload_distribution][topk][num_experts][
                             hidden_size
                         ][inter_size][moe_tp_size][moe_ep_size]
+                    if not moe_dict:
+                        raise PerfDataNotAvailableError(
+                            f"MoE perf data missing for system='{self.system}', backend='{self.backend}', "
+                            f"version='{self.version}', quant_mode={quant_mode}, "
+                            f"shape=[hidden={hidden_size}, inter={inter_size}, topk={topk}, "
+                            f"num_experts={num_experts}], moe_tp={moe_tp_size}, moe_ep={moe_ep_size}."
+                        )
                     token_points = sorted(moe_dict.keys())
                     if num_tokens > token_points[-1]:
                         return _estimate_overflow_with_last_token_util(
@@ -5532,6 +5546,13 @@ class PerfDatabase:
                     moe_dict = self._moe_data[quant_mode][used_workload_distribution][topk][num_experts][hidden_size][
                         inter_size
                     ][moe_tp_size][moe_ep_size]
+                    if not moe_dict:
+                        raise PerfDataNotAvailableError(
+                            f"MoE perf data missing for system='{self.system}', backend='{self.backend}', "
+                            f"version='{self.version}', quant_mode={quant_mode}, "
+                            f"shape=[hidden={hidden_size}, inter={inter_size}, topk={topk}, "
+                            f"num_experts={num_experts}], moe_tp={moe_tp_size}, moe_ep={moe_ep_size}."
+                        )
                     token_points = sorted(moe_dict.keys())
                     if num_tokens > token_points[-1]:
                         return _estimate_overflow_with_last_token_util(
