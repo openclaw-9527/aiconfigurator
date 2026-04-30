@@ -32,26 +32,34 @@ jobs:
           SYNC_FORK_PAT: ${{ secrets.SYNC_FORK_PAT }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GIT_LFS_SKIP_SMUDGE: 1
+          UPSTREAM_REPOSITORY: ai-dynamo/aiconfigurator
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git lfs install --local --skip-smudge
-          git remote add upstream https://github.com/ai-dynamo/aiconfigurator.git
+          git remote add upstream "https://github.com/${UPSTREAM_REPOSITORY}.git"
           git remote set-url origin "https://x-access-token:${SYNC_FORK_PAT}@github.com/${GITHUB_REPOSITORY}.git"
 
           sync_branch() {
             local branch="$1"
             echo "Syncing ${branch} with upstream/${branch}"
-            git fetch origin "+refs/heads/${branch}:refs/remotes/origin/${branch}"
             git fetch upstream "+refs/heads/${branch}:refs/remotes/upstream/${branch}"
-            git checkout -B "${branch}" "origin/${branch}"
-            git merge --no-edit "upstream/${branch}"
+
+            if git ls-remote --exit-code --heads origin "${branch}" >/dev/null; then
+              git fetch origin "+refs/heads/${branch}:refs/remotes/origin/${branch}"
+              git checkout -B "${branch}" "origin/${branch}"
+              git merge --no-edit "upstream/${branch}"
+            else
+              echo "Branch ${branch} does not exist in fork; creating it from upstream/${branch}"
+              git checkout -B "${branch}" "upstream/${branch}"
+            fi
+
             git push origin "${branch}"
           }
 
           sync_branch main
 
-          RELEASE_BRANCH=$(git ls-remote --heads "https://github.com/${GITHUB_REPOSITORY}.git" 'refs/heads/release/*' \
+          RELEASE_BRANCH=$(git ls-remote --heads "https://github.com/${UPSTREAM_REPOSITORY}.git" 'refs/heads/release/*' \
             | sed 's|.*refs/heads/||' \
             | sort -t'/' -k2 -V \
             | tail -n1)
