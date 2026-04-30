@@ -124,6 +124,31 @@ class TestIssuesYAML:
                 seen[issue_id] = i
         assert not dups, "Duplicate issue_id values: " + "; ".join(dups)
 
+    def test_issue_description_not_empty(self, issues: list[dict]) -> None:
+        bad: list[str] = []
+        for issue in issues:
+            issue_id = _normalize_issue_id(issue.get("issue_id"))
+            if not str(issue.get("description_pre") or "").strip():
+                bad.append(issue_id)
+        assert not bad, f"Issues with empty Issue Description: {bad}"
+
+    def test_failed_cases_not_empty(self, issues: list[dict]) -> None:
+        bad: list[str] = []
+        for issue in issues:
+            issue_id = _normalize_issue_id(issue.get("issue_id"))
+            failed_cases = issue.get("failed_cases") or []
+            if not failed_cases or any(not all(_case_key(case)) for case in failed_cases):
+                bad.append(issue_id)
+        assert not bad, f"Issues with empty Failed Cases: {bad}"
+
+    def test_example_err_msg_not_empty(self, issues: list[dict]) -> None:
+        bad: list[str] = []
+        for issue in issues:
+            issue_id = _normalize_issue_id(issue.get("issue_id"))
+            if not str(issue.get("err_msg") or "").strip():
+                bad.append(issue_id)
+        assert not bad, f"Issues with empty Example ErrMsg: {bad}"
+
 
 # ---------------------------------------------------------------------------
 # 3. Cross-checks between CSV and YAML
