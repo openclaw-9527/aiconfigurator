@@ -6,6 +6,7 @@ import math
 import pytest
 
 from aiconfigurator.sdk import common
+from aiconfigurator.sdk.perf_database import PerfDataNotAvailableError
 from aiconfigurator.sdk.performance_result import PerformanceResult
 
 pytestmark = pytest.mark.unit
@@ -218,6 +219,44 @@ class TestMoE:
             2
         ][max_stored]
         assert float(result) > latency_at_max
+
+    def test_query_moe_silicon_missing_shape_raises_structured_error(self, comprehensive_perf_db):
+        """Regression for issue #43: when a shape/TP/EP combination is absent from the
+        perf table, the nested defaultdict returns an empty dict. Previously
+        ``sorted(moe_dict.keys())[-1]`` raised ``IndexError``. The query must now raise
+        ``PerfDataNotAvailableError`` so callers can fall back to HYBRID mode or report
+        a clear message."""
+        with pytest.raises(PerfDataNotAvailableError, match="MoE perf data is missing"):
+            comprehensive_perf_db.query_moe(
+                num_tokens=128,
+                hidden_size=9999,
+                inter_size=9999,
+                topk=2,
+                num_experts=8,
+                moe_tp_size=2,
+                moe_ep_size=2,
+                quant_mode=common.MoEQuantMode.bfloat16,
+                workload_distribution="uniform",
+                database_mode=common.DatabaseMode.SILICON,
+            )
+
+    def test_query_moe_hybrid_missing_shape_falls_back_to_empirical(self, comprehensive_perf_db):
+        """Regression for issue #43: HYBRID mode must gracefully fall back to the
+        empirical estimate when the requested shape is not in the perf table."""
+        result = comprehensive_perf_db.query_moe(
+            num_tokens=128,
+            hidden_size=9999,
+            inter_size=9999,
+            topk=2,
+            num_experts=8,
+            moe_tp_size=2,
+            moe_ep_size=2,
+            quant_mode=common.MoEQuantMode.bfloat16,
+            workload_distribution="uniform",
+            database_mode=common.DatabaseMode.HYBRID,
+        )
+        assert isinstance(result, PerformanceResult)
+        assert float(result) > 0
 
     def test_query_moe_silicon_boundary_at_max_tokens(self, comprehensive_perf_db):
         """When num_tokens == max(moe_dict), interpolation path is used (exact hit), not overflow."""
