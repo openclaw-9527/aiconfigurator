@@ -22,7 +22,7 @@ Required environment variables:
 Use this exact payload structure for `notification.json`:
 ```json
 {
-    "title": "Autofix Run [${GITHUB_RUN_ID}]",
+    "title": "Autofix Run [<value of GITHUB_RUN_ID>]",
     "description": "<one line summary>",
     "issues": [
         {
@@ -35,6 +35,8 @@ Use this exact payload structure for `notification.json`:
     ]
 }
 ```
+
+Do not write the literal string `${GITHUB_RUN_ID}` into `notification.json`. Use the actual workflow run ID from the `GITHUB_RUN_ID` environment variable.
 
 Example:
 ```json

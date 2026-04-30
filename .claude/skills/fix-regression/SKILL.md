@@ -36,6 +36,7 @@ In this project, while engineers commit to the repo, we have identified some reg
 5. Craete a `LOG.md` file with the following tempalate
 ```markdown
 # Issue <!-- issue_id -->
+Pics (based on git history): <!-- Emails of the committers, make sure that the email matches git commit history -->
 ## Description
 <!-- summary of the issue -->
 ## Actions Done

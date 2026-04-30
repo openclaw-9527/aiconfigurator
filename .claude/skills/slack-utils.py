@@ -158,7 +158,16 @@ def workflow_run_url(run_id: str, notification: dict[str, Any]) -> str | None:
     return None
 
 
+def expand_github_run_id_placeholders(title: str) -> str:
+    run_id = os.environ.get("GITHUB_RUN_ID")
+    if not run_id:
+        return title
+    return title.replace("${GITHUB_RUN_ID}", run_id).replace("$GITHUB_RUN_ID", run_id)
+
+
 def link_workflow_run_in_title(title: str, notification: dict[str, Any]) -> str:
+    title = expand_github_run_id_placeholders(title)
+
     def replace(match: re.Match[str]) -> str:
         run_id = match.group(1)
         run_url = workflow_run_url(run_id, notification)
@@ -197,6 +206,7 @@ def build_summary_payload(
     description: str,
     notification: dict[str, Any],
 ) -> dict[str, Any]:
+    title = expand_github_run_id_placeholders(title)
     linked_title = link_workflow_run_in_title(title, notification)
     return {
         "channel": channel_id,
@@ -206,14 +216,7 @@ def build_summary_payload(
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"*{linked_title}*",
-                },
-            },
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": description,
+                    "text": f"*{linked_title}*\n{description}",
                 },
             },
         ],
