@@ -1,0 +1,43 @@
+{
+    "title": "Autofix Run [25155928706]",
+    "description": "5 issues triaged, 5 issues updated with comments, 1 PR opened, 0 issues created, 0 issues closed.",
+    "issues": [
+        {
+            "title": "#52 FP8 block-quantized MoE validator rejects all 18 combinations",
+            "description": "`_validate_fp8_block_quantized_moe_config` raises `ValueError` for every FP8 block-quant MoE model (MiniMax-M2.5, Qwen3-235B-A22B-FP8, Qwen3-30B-A3B-FP8). Investigation confirms this is a duplicate of #26 (closed NOT_PLANNED, PR #31 closed-without-merge). Repro on `main` returns non-empty Pareto for all 18 cases. No PR opened — reopening the prior NOT_PLANNED decision is a human call.",
+            "issue": "https://github.com/openclaw-9527/aiconfigurator/issues/52",
+            "prs": [],
+            "pic": "61184708+changhuaixin@users.noreply.github.com"
+        },
+        {
+            "title": "#53 h100_sxm/sglang/0.5.9 perf data missing on release/0.8.0",
+            "description": "`KeyError: 256` from missing `systems/data/h100_sxm/sglang/0.5.9/` files on `release/0.8.0`. On `main` all 13 perf files exist and `run_single_test` returns `{agg: True, disagg: True}`. `release/0.8.0` does not exist on origin — no cherry-pick target. Duplicate of #40 and #46. Comment posted requesting confirmation of the target branch.",
+            "issue": "https://github.com/openclaw-9527/aiconfigurator/issues/53",
+            "prs": [],
+            "pic": "harrli@nvidia.com, 49143331+tianhaox@users.noreply.github.com, 170655669+dynamo-ops@users.noreply.github.com"
+        },
+        {
+            "title": "#54 Llama-3.1-405B GB200 custom-allreduce AssertionError",
+            "description": "`AssertionError` on `query_custom_allreduce` for `tp_size=16` on GB200 — hard-coded `min(tp_size, 8)` collapses to empty bucket. `main` already contains both fixes: `eba0c74` (PR #681) and `a8b0934` (PR #884). `release/0.8.0` does not exist on origin, so no cherry-pick PR. 5th duplicate (prior #28/#36/#41/#47). Tracker comment posted.",
+            "issue": "https://github.com/openclaw-9527/aiconfigurator/issues/54",
+            "prs": [],
+            "pic": "simonec@nvidia.com, yimingl@nvidia.com"
+        },
+        {
+            "title": "#55 Dense FP8 Llama rejected by MoE quant-mode validator",
+            "description": "`TaskConfig.validate` rejects dense `nvidia/Llama-3.1-70B-Instruct-FP8` on `(b60, vllm, 0.12.0)` with `Unsupported moe quant mode 'fp8'`. Fix opened as PR #57 on `main` (branch `fix/issue-55-dense-fp8-moe-validation`): gate MoE validation on `check_is_moe(model_path)` so dense models skip it. 42/42 unit tests pass; repro now returns `agg=True, disagg=True`.",
+            "issue": "https://github.com/openclaw-9527/aiconfigurator/issues/55",
+            "prs": [
+                "https://github.com/openclaw-9527/aiconfigurator/pull/57"
+            ],
+            "pic": "jasonzho@nvidia.com, 49143331+tianhaox@users.noreply.github.com"
+        },
+        {
+            "title": "#56 MoE MFU extrapolator IndexError on empty leaf",
+            "description": "`PerfDatabase.query_moe → get_silicon` raises `IndexError` for Nemotron-3-Nano-30B-A3B-BF16 on h100_sxm (trtllm 1.2.0rc5, vllm 0.14.0) because `sorted(moe_dict.keys())[-1]` is called on an empty defaultdict leaf (shape collected for `moe_tp ∈ {1,2,4}` but not `moe_tp=8`). 4th recurrence — prior issues #30/#43/#48 closed NOT_PLANNED and PRs #19/#32/#44/#50 closed without merge. Triage comment posted; no PR opened.",
+            "issue": "https://github.com/openclaw-9527/aiconfigurator/issues/56",
+            "prs": [],
+            "pic": "kimiz@nvidia.com"
+        }
+    ]
+}
