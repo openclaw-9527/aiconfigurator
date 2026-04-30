@@ -40,7 +40,18 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v5
-        
+
+      - name: Acknowledge triggering comment
+        if: ${{ env.COMMENT_ID != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/${{ github.repository }}/issues/comments/${COMMENT_ID}/reactions" \
+            -f content=eyes
+
       - name: Install Claude Code
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

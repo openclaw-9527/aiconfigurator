@@ -20,15 +20,28 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Checkout fork main
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
       - name: Sync fork's main with upstream
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SYNC_FORK_PAT: ${{ secrets.SYNC_FORK_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GIT_LFS_SKIP_SMUDGE: 1
         run: |
-          gh api \
-            --method POST \
-            -H "Accept: application/vnd.github+json" \
-            /repos/${{ github.repository }}/merge-upstream \
-            -f branch=main
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git lfs install --local --skip-smudge
+          git remote add upstream https://github.com/ai-dynamo/aiconfigurator.git
+          git remote set-url origin "https://x-access-token:${SYNC_FORK_PAT}@github.com/${GITHUB_REPOSITORY}.git"
+          git fetch upstream main
+          git checkout main
+          git merge --no-edit upstream/main
+          git push origin main
 
   claude-categorize-support-matrix:
     name: Categorize Support Matrix Regressions
@@ -234,7 +247,8 @@ jobs:
           ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
           ANTHROPIC_MODEL: ${{ secrets.ANTHROPIC_MODEL }}
           CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS: 1
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
         run: |
           set -o pipefail
           # Read-only summarization plus one Write for ./REPORT.md.

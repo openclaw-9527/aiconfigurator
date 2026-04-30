@@ -27,6 +27,12 @@ In this project, while engineers commit to the repo, we have identified some reg
     2. If a fix is not possible due to the following reason:
         1. If the performance database (txt file) is broken, mention that in the oringal github issue, @(mention) the people whose commit has introduced this regression. Note: you should specify what ops (in `--ops` param for `collector/collect.py`) for which backend/version/hardware is needed; also, you may need to draft a PR if the collector itself needs to be modified.
         2. If the problem is too complicated, mentioned that why this issue cannot be fixed, or mention that some critical decisions should be made by human engineer in the original issue
+    A typical comment on the issue/PR should follow the following outline
+    - Summary
+    - Root Cause
+    - Actions Done (if any)
+    - Next Step (if any) (if possible, show arguments for collect.py to work)
+    - Verification Step (if any)
 5. Craete a `LOG.md` file with the following tempalate
 ```markdown
 # Issue <!-- issue_id -->
