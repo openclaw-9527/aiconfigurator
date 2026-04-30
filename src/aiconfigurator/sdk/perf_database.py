@@ -5520,6 +5520,23 @@ class PerfDatabase:
             return PerformanceResult(emp_latency, energy=0.0)
         else:
             # SILICON or HYBRID mode - use database
+            def _require_moe_shape(moe_dict) -> None:
+                # The MoE tables are loaded into nested defaultdicts, so any missing
+                # (quant_mode, distribution, topk, num_experts, hidden_size, inter_size,
+                # moe_tp_size, moe_ep_size) combination silently yields an empty dict.
+                # Surface this as a structured PerfDataNotAvailableError so HYBRID
+                # callers fall back cleanly and SILICON callers get a readable message
+                # instead of an IndexError from ``token_points[-1]``.
+                if not moe_dict:
+                    raise PerfDataNotAvailableError(
+                        f"No MoE silicon data for system='{self.system}', backend='{self.backend}', "
+                        f"version='{self.version}', quant_mode={quant_mode.value.name}, "
+                        f"hidden_size={hidden_size}, inter_size={inter_size}, topk={topk}, "
+                        f"num_experts={num_experts}, moe_tp_size={moe_tp_size}, "
+                        f"moe_ep_size={moe_ep_size}, workload_distribution='{workload_distribution}'. "
+                        "Consider using HYBRID mode, or collect moe data for this shape."
+                    )
+
             def get_silicon():
                 if self.backend == common.BackendName.sglang.value:
                     # deepep_moe is for sglang wideep only
@@ -5541,6 +5558,7 @@ class PerfDatabase:
                     moe_dict = moe_data[quant_mode][used_workload_distribution][topk][num_experts][hidden_size][
                         inter_size
                     ][moe_tp_size][moe_ep_size]
+                    _require_moe_shape(moe_dict)
                     token_points = sorted(moe_dict.keys())
                     if num_tokens_corrected > token_points[-1]:
                         return _estimate_overflow_with_last_token_util(
@@ -5624,6 +5642,7 @@ class PerfDatabase:
                         moe_dict = self._moe_data[quant_mode][used_workload_distribution][topk][num_experts][
                             hidden_size
                         ][inter_size][moe_tp_size][moe_ep_size]
+                    _require_moe_shape(moe_dict)
                     token_points = sorted(moe_dict.keys())
                     if num_tokens > token_points[-1]:
                         return _estimate_overflow_with_last_token_util(
@@ -5663,6 +5682,7 @@ class PerfDatabase:
                     moe_dict = self._moe_data[quant_mode][used_workload_distribution][topk][num_experts][hidden_size][
                         inter_size
                     ][moe_tp_size][moe_ep_size]
+                    _require_moe_shape(moe_dict)
                     token_points = sorted(moe_dict.keys())
                     if num_tokens > token_points[-1]:
                         return _estimate_overflow_with_last_token_util(
