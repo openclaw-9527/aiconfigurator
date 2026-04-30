@@ -132,10 +132,18 @@ def pr_link(url: str) -> str:
     return slack_link(url, label)
 
 
+def pr_links(urls: list[str]) -> str:
+    links = [pr_link(str(url).strip()) for url in urls if str(url).strip()]
+    if not links:
+        return "not provided"
+    return ", ".join(links)
+
+
 def infer_github_repo_url(notification: dict[str, Any]) -> str | None:
     for issue in notification.get("issues", []):
-        for key in ("issue", "pr"):
-            match = GITHUB_REPO_URL_RE.search(str(issue.get(key, "")))
+        urls = [issue.get("issue", ""), *issue.get("prs", [])]
+        for url in urls:
+            match = GITHUB_REPO_URL_RE.search(str(url))
             if match:
                 return match.group(1)
     return None
@@ -182,16 +190,20 @@ def format_issue_detail(issue: dict[str, Any], index: int) -> str:
     title = str(issue["title"]).strip()
     description = str(issue["description"]).strip()
     issue_url = str(issue["issue"]).strip()
-    pr_url = str(issue["pr"]).strip()
+    prs = issue["prs"]
     pic = normalize_pic_mentions(issue["pic"])
 
     lines = [
         f"{index}. *{title}*",
-        f"_{description}_",
-        f"Issue: {issue_link(issue_url)} | PR: {pr_link(pr_url)}",
     ]
     if pic:
         lines.append(f"cc {pic}")
+    lines.extend(
+        [
+            f"Issue: {issue_link(issue_url)} | PR: {pr_links(prs)}",
+            f"_{description}_",
+        ]
+    )
 
     return "\n".join(lines)
 

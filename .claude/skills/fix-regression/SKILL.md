@@ -24,6 +24,7 @@ In this project, while engineers commit to the repo, we have identified some reg
 3. Traverse the git history, find out which commit has introduced this regression (note: you should not trust `support_matrix.csv` in any commit, as the file is highly likely outdated). Instead, you should try the test case (with util script at `tools/support_matrix/support_matrix.py`, function `run_single_test`) and find out the cause.
 4. Compare the ToT main or release branch (depends on which branch has regression, prioritize main), suggest a fix if possible
     1. If a fix is possible, compose a fix and submit a PR to the main branch. In the PR, @(mention) the people whose commit has introduced this regression, and mention the issue in the PR
+        Note: if there's already a PR on main, but not yet cherry-picked into release branch. You should create a PR to cherrypick the commit to the release branch – only one cherry-pick per PR. You can create multiple PRs per issue.
     2. If a fix is not possible due to the following reason:
         1. If the performance database (txt file) is broken, mention that in the oringal github issue, @(mention) the people whose commit has introduced this regression. Note: you should specify what ops (in `--ops` param for `collector/collect.py`) for which backend/version/hardware is needed; also, you may need to draft a PR if the collector itself needs to be modified.
         2. If the problem is too complicated, mentioned that why this issue cannot be fixed, or mention that some critical decisions should be made by human engineer in the original issue
@@ -54,3 +55,4 @@ Pics (based on git history): <!-- Emails of the committers, make sure that the e
 1. You may want to do `pip install -e .` so that you can use the same workspace while checking out to different commits
 2. The only allowed labels are: `regression` and `bug`. Do not create additional labels.
 3. If a regression only happens in release branch but not main branch. It suggests that a fix may already be available. You should mention in the issue that which commit to cherry-pick (you may test it locally to make sure it works.)
+4. Only consider open issues, do not read closed or not planner issues.

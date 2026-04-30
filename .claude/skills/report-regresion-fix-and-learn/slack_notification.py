@@ -12,8 +12,8 @@ from pathlib import Path
 from typing import Any
 
 REQUIRED_TOP_LEVEL_KEYS = ("title", "description", "issues")
-REQUIRED_ISSUE_KEYS = ("title", "description", "issue", "pr", "pic")
-ENDING_MESSAGE = "Comment in the PR/issue for the agent to follow up."
+REQUIRED_ISSUE_KEYS = ("title", "description", "issue", "prs", "pic")
+ENDING_MESSAGE = ":announcement: Comment in the PR/issue for the agent to follow up."
 
 
 def load_slack_utils():
@@ -61,6 +61,14 @@ def _validate_pic(value: Any, path: str) -> None:
     raise NotificationValidationError(f"{path}.pic must be a string or list of strings")
 
 
+def _validate_prs(value: Any, path: str) -> None:
+    if not isinstance(value, list):
+        raise NotificationValidationError(f"{path}.prs must be a list of strings")
+    for index, item in enumerate(value):
+        if not isinstance(item, str):
+            raise NotificationValidationError(f"{path}.prs[{index}] must be a string")
+
+
 def validate_notification(payload: Any) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise NotificationValidationError("notification payload must be a JSON object")
@@ -90,7 +98,7 @@ def validate_notification(payload: Any) -> dict[str, Any]:
         _require_string(issue, "title", issue_path)
         _require_string(issue, "description", issue_path)
         _require_string(issue, "issue", issue_path, allow_empty=True)
-        _require_string(issue, "pr", issue_path, allow_empty=True)
+        _validate_prs(issue["prs"], issue_path)
         _validate_pic(issue["pic"], issue_path)
 
     return payload

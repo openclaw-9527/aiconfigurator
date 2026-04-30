@@ -29,7 +29,9 @@ Use this exact payload structure for `notification.json`:
             "title": "<issue title>",
             "description": "<issue-specific summary>",
             "issue": "<GitHub issue URL, or empty string if none>",
-            "pr": "<GitHub PR URL, or empty string if none>",
+            "prs": [
+                "<GitHub PR URL; empty list if none>"
+            ],
             "pic": "<PIC email(s), such as 'person_a@nvidia.com, person_b@nvidia.com'>"
         }
     ]
@@ -48,14 +50,17 @@ Example:
             "title": "FP8 MoE quant mode rejected",
             "description": "b60/vllm/0.12.0 rejects FP8 MoE quant mode (supported modes: ['float16']).",
             "issue": "https://github.com/openclaw-9527/aiconfigurator/issues/10",
-            "pr": "https://github.com/openclaw-9527/aiconfigurator/pull/11",
+            "prs": [
+                "https://github.com/openclaw-9527/aiconfigurator/pull/11",
+                "https://github.com/openclaw-9527/aiconfigurator/pull/12"
+            ],
             "pic": "person_a@nvidia.com, person_b@nvidia.com"
         },
         {
             "title": "Missing custom allreduce perf data",
             "description": "Custom allreduce perf data missing for tp_size=16 on gb200 (Llama-3.1-405B).",
             "issue": "https://github.com/openclaw-9527/aiconfigurator/issues/10",
-            "pr": "",
+            "prs": [],
             "pic": "person_a@nvidia.com, person_c@nvidia.com"
         }
     ]
@@ -71,7 +76,7 @@ python .claude/skills/report-regresion-fix-and-learn/slack_notification.py notif
 ```bash
 python .claude/skills/report-regresion-fix-and-learn/slack_notification.py notification.json
 ```
-The script posts `title` and `description` as the parent message, then posts each entry in `issues` as a separate threaded reply. Each issue reply renders the issue `title` in bold, the issue `description` in italic, and the `issue` URL as a `#<issue_id>` link. It resolves each `pic` email to a Slack mention when possible.
+The script posts `title` and `description` as the parent message, then posts each entry in `issues` as a separate threaded reply. Each issue reply renders the issue `title` in bold, then PIC mentions, then `issue`/`prs` links, then the issue `description` in italic. It resolves each `pic` email to a Slack mention when possible.
 When `title` contains `[${GITHUB_RUN_ID}]`, the script links that bracketed run ID to the GitHub Actions workflow run using `GITHUB_REPOSITORY`.
 7. Generate a `REPORT.md` based on the following template
 ```markdown

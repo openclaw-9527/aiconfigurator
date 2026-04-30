@@ -27,3 +27,4 @@ In this project, while engineers commit to the repo, we have identified some reg
 1. Definition of the "same issue": it may have different error trace, but the root cause should be the same. A.k.a, a single fix PR can apply to all the failed cases in the issue.
 2. You may want to checkout to different branches to view the issue (if needed)
 3. You should focus on both the main branch and the targeted release branch (as mentioned in `regressions.csv`)
+4. Only consider open issues, do not read closed or not planner issues.
