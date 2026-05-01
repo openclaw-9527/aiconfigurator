@@ -20,7 +20,17 @@ Operational notes for this skill:
   silently declines in the Actions harness. Fall back to writing the
   file to `/tmp/` first, then `mv` into place.
 - When no issues had PR/issue updates, skip sending the Slack
-  notification and still emit `REPORT.md`.
+  notification and still emit `REPORT.md`. **Re-pings on existing PRs
+  count as updates** — if the skill re-pinged PICs, send the
+  notification.
 - For "How Can I Do Better", concrete resource asks (GB200 hardware
   access, LFS pre-pull helper, assignee-verify wrapper) land better
   than vague process complaints.
+- When LOG.md describes an "already addressed in prior run" scenario,
+  the report should surface the stalled PR status and the last
+  reviewer-ask, not re-summarize the original root cause — the Slack
+  notification's job is to unblock review, not re-educate.
+- Per-issue `description` field in `notification.json` should name the
+  specific PR number + its current state (`MERGEABLE`, open review
+  questions, etc.) so the reviewer can act from Slack without opening
+  the PR first.
