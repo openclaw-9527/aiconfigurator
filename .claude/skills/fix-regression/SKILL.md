@@ -24,7 +24,7 @@ In this project, while engineers commit to the repo, we have identified some reg
 3. Traverse the git history, find out which commit has introduced this regression (note: you should not trust `support_matrix.csv` in any commit, as the file is highly likely outdated). Instead, you should try the test case (with util script at `tools/support_matrix/support_matrix.py`, function `run_single_test`) and find out the cause.
 4. Compare the ToT main or release branch (depends on which branch has regression, prioritize main), suggest a fix if possible
     1. If a fix is possible, compose a fix and submit a PR to the main branch. In the PR, @(mention) the people whose commit has introduced this regression, and mention the issue in the PR
-        Note: if there's already a PR on main, but not yet cherry-picked into release branch. You should create a PR to cherrypick the commit to the release branch – only one cherry-pick per PR. You can create multiple PRs per issue.
+        Note: if there's already a PR on main, but not yet cherry-picked into release branch. You should create a PR to cherrypick the commit to the release branch – only one cherry-pick per PR. You can create multiple PRs per issue. The cherrypick should reflect exactly the original commit and original author. You shall never change the author nor any content of the original commit.
     2. If a fix is not possible due to the following reason:
         1. If the performance database (txt file) is broken, mention that in the oringal github issue, @(mention) the people whose commit has introduced this regression. Note: you should specify what ops (in `--ops` param for `collector/collect.py`) for which backend/version/hardware is needed; also, you may need to draft a PR if the collector itself needs to be modified.
         2. If the problem is too complicated, mentioned that why this issue cannot be fixed, or mention that some critical decisions should be made by human engineer in the original issue
@@ -34,8 +34,9 @@ In this project, while engineers commit to the repo, we have identified some reg
     - Actions Done (if any)
     - Next Step (if any) (if possible, show arguments for collect.py to work)
     - Verification Step (if any)
-6. Assign the issue and PR (if any) to the PIC discovered
-5. Craete a `LOG.md` file with the following tempalate
+5. Assign the issue and PR (if any) to the PIC discovered
+6. Label the PR to `branch-main` and/or `branch-release`. If no `branch-*` label on issue, add it as well. 
+7. Craete a `LOG.md` file with the following tempalate
 ```markdown
 # Issue <!-- issue_id -->
 Pics (based on git history): <!-- Emails of the committers, make sure that the email matches git commit history -->
@@ -51,6 +52,7 @@ Pics (based on git history): <!-- Emails of the committers, make sure that the e
     2. GitHub isseue is updated (no matter the previous commment was replied by human or not)
     3. GitHub PR is updated (only if you have applied a fix)
     4. The issue and PR (if created) are assigned to PIC
+    5. PR and issue are labeled.
     Then, end the workflow
 
 ## Notes
