@@ -56,3 +56,17 @@ Concise notes from prior autofix runs. Read before starting.
    `python collector/collect.py --backend trtllm --version <v> --ops moe`)
    in the issue comment and hand off to the PIC. Do not fabricate
    data or suppress the error as a "fix".
+
+## Re-runs on already-addressed issues
+
+9. **If the prior run opened a PR that is still awaiting review, do
+   NOT re-diagnose or re-post the root cause** — it just adds noise.
+   The only productive action is a terse re-ping in the comment body
+   on the most-recent-activity thread.
+10. **Check PR comments, not just issue comments, for the latest human
+    activity.** The issue thread can be stale while the PR thread is
+    live. Fastest lookup:
+    `gh pr view <n> --json comments --jq '.comments | sort_by(.createdAt) | last'`.
+11. **Re-ping comments should include a one-paragraph context recap**
+    naming the open reviewer questions, so the reviewer can resolve
+    the thread in place without scrolling back through the history.
