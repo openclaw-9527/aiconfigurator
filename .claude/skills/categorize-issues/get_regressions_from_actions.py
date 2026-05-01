@@ -3,17 +3,18 @@
 # SPDX-License-Identifier: Apache-2.0
 
 """
-Fetch the support matrix CSV from three branches of ai-dynamo/aiconfigurator
+Fetch the support matrix CSV from support-matrix base and update branches
 and emit a single CSV listing every regression.
 
 Branches inspected:
     1. release/{latest_version}                   (the most recent release/* branch)
-    2. main                                       (baseline)
-    3. automated/update-support-matrix-main       (proposed update to main)
+    2. automated/update-support-matrix-release/{latest_version}
+    3. main                                       (baseline)
+    4. automated/update-support-matrix-main       (proposed update to main)
 
 A row is reported as a regression when the combination
     (HuggingFaceID, Architecture, System, Backend, Version, Mode)
-has Status=PASS on (2) main, but Status=FAIL on (1) or (3).
+has Status=PASS on a base branch, but Status=FAIL on its proposed update branch.
 
 Output columns:
     HuggingFaceID, Architecture, System, Backend, Version, Mode, FailedBranch, ErrMsg
@@ -147,14 +148,14 @@ def fetch_csv(branch: str) -> dict[tuple, dict[str, str]]:
 
 
 def collect_regressions(
-    main_rows: dict[tuple, dict[str, str]],
+    base_rows: dict[tuple, dict[str, str]],
     other_rows: dict[tuple, dict[str, str]],
     failed_branch: str,
 ) -> list[dict[str, str]]:
-    """Rows that pass on main but fail on the other branch."""
+    """Rows that pass on a base branch but fail on the other branch."""
     regressions: list[dict[str, str]] = []
-    for key, main_row in main_rows.items():
-        if main_row.get("Status") != "PASS":
+    for key, base_row in base_rows.items():
+        if base_row.get("Status") != "PASS":
             continue
         other_row = other_rows.get(key)
         if other_row is None or other_row.get("Status") != "FAIL":
@@ -196,21 +197,24 @@ def main() -> int:
         latest_version = find_latest_release_branch()
         release_branch = f"release/{latest_version}"
 
-    automated_branch = "automated/update-support-matrix-main"
+    automated_release_branch = f"automated/update-support-matrix-{release_branch}"
+    automated_main_branch = "automated/update-support-matrix-main"
     main_branch = "main"
 
     print("Fetching CSVs:", file=sys.stderr)
     print(f"  (1) {release_branch}", file=sys.stderr)
-    print(f"  (2) {main_branch}", file=sys.stderr)
-    print(f"  (3) {automated_branch}", file=sys.stderr)
+    print(f"  (2) {automated_release_branch}", file=sys.stderr)
+    print(f"  (3) {main_branch}", file=sys.stderr)
+    print(f"  (4) {automated_main_branch}", file=sys.stderr)
 
     release_rows = fetch_csv(release_branch)
+    automated_release_rows = fetch_csv(automated_release_branch)
     main_rows = fetch_csv(main_branch)
-    automated_rows = fetch_csv(automated_branch)
+    automated_main_rows = fetch_csv(automated_main_branch)
 
     regressions = []
-    regressions.extend(collect_regressions(main_rows, release_rows, release_branch))
-    regressions.extend(collect_regressions(main_rows, automated_rows, automated_branch))
+    regressions.extend(collect_regressions(release_rows, automated_release_rows, automated_release_branch))
+    regressions.extend(collect_regressions(main_rows, automated_main_rows, automated_main_branch))
 
     fieldnames = [
         "HuggingFaceID",
