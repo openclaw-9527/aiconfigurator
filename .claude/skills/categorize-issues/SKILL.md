@@ -19,6 +19,9 @@ In this project, while engineers commit to the repo, we have identified some reg
     2. If it is not in `issues.yaml`
         1. If you can find a match to an existing issue, add it to the issue. Update the `issue_id` field (create a new column if needed) in the csv and update the `failed_cases` field of the yaml.
         2. If you cannot find a match to an existing issue, create a new issue with `issue_id`: `TBD_<#>` where <#> is a temporary number incremental from 0, e.g, TBD_1. Note `issues.yaml` is constantly updating throughtout the current workflow. You should not create distinct numbers for the same issue. Add label `regression` to the issue label. You can add a sample err_msg from csv to yaml if not exist
+    3. Revisit the labels
+        1. If the regression is on main branch, tag label `branch-main`
+        2. If the regression is on release branch, tag label `branch-release`
 4. Read through `issues.yaml` to make sure all description, title, failed_cases looks good, and there is no duplication of the issues with the same cause.
 5. Read through `issues.yaml`. Focus on each `failed_cases`: if the case is no longer in `regressions.csv`, remove it.
 6. Run `test_issues_regressions.py` to check you have successfully completed this task. If test fail, fix your yaml and csv instead of fixing the test file.
@@ -27,4 +30,4 @@ In this project, while engineers commit to the repo, we have identified some reg
 1. Definition of the "same issue": it may have different error trace, but the root cause should be the same. A.k.a, a single fix PR can apply to all the failed cases in the issue.
 2. You may want to checkout to different branches to view the issue (if needed)
 3. You should focus on both the main branch and the targeted release branch (as mentioned in `regressions.csv`)
-4. Only consider open issues, do not read closed or not planner issues.
+4. Only consider open issues, do not read or mention closed or not planned issues in any step of the workflow.

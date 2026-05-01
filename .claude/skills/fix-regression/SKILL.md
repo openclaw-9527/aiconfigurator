@@ -34,6 +34,7 @@ In this project, while engineers commit to the repo, we have identified some reg
     - Actions Done (if any)
     - Next Step (if any) (if possible, show arguments for collect.py to work)
     - Verification Step (if any)
+6. Assign the issue and PR (if any) to the PIC discovered
 5. Craete a `LOG.md` file with the following tempalate
 ```markdown
 # Issue <!-- issue_id -->
@@ -49,10 +50,11 @@ Pics (based on git history): <!-- Emails of the committers, make sure that the e
     1. `LOG.md` is present
     2. GitHub isseue is updated (no matter the previous commment was replied by human or not)
     3. GitHub PR is updated (only if you have applied a fix)
+    4. The issue and PR (if created) are assigned to PIC
     Then, end the workflow
 
 ## Notes
 1. You may want to do `pip install -e .` so that you can use the same workspace while checking out to different commits
-2. The only allowed labels are: `regression` and `bug`. Do not create additional labels.
+2. The only allowed labels are: `regression`, `bug`, `branch-main`, and `branch-release`. Do not create additional labels.
 3. If a regression only happens in release branch but not main branch. It suggests that a fix may already be available. You should mention in the issue that which commit to cherry-pick (you may test it locally to make sure it works.)
-4. Only consider open issues, do not read closed or not planner issues.
+4. Only consider open issues, do not read or mention closed or not planned issues in any step of the workflow.

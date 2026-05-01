@@ -44,7 +44,7 @@ Example:
 ```json
 {
     "title": "Autofix Run [123456789]",
-    "description": "2 issues updated, 2 issues created, 1 PR created, 2 issues closed, 5 issues was not responded",
+    "description": "Main: 16 remaining regressions, 32 fixed\nRelease/0.8.0: 2 remaining regressions, 48 fixed\n2 issues updated, 2 issues created, 1 PR created, 2 issues closed, 5 issues was not responded",
     "issues": [
         {
             "title": "FP8 MoE quant mode rejected",
