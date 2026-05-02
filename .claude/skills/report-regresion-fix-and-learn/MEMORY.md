@@ -34,3 +34,19 @@ Operational notes for this skill:
   specific PR number + its current state (`MERGEABLE`, open review
   questions, etc.) so the reviewer can act from Slack without opening
   the PR first.
+- **Paused-issue re-runs = no Slack post, but still dry-run the JSON.**
+  When every `LOG.md` in the batch says "no new action this run" (the
+  common outcome for `wontfix`-gated issues waiting on a release
+  branch cut), suppress the Slack post but still emit `REPORT.md` and
+  run `--dry-run` on `notification.json` to catch schema drift before
+  the next live run. Retain `notification.json` as an audit artifact.
+- **`REPORT.md` for paused runs should cite the gate, not re-summarize
+  root cause.** Name the prior PR number, the directive verbatim, and
+  the gating condition (e.g. `release/0.9.0` missing). Re-deriving the
+  regression diagnosis bloats the report and buries the one actionable
+  fact: the gate hasn't flipped.
+- **Concrete resource asks for "How Can I Do Better" beat process
+  complaints.** Examples that read well: release-branch cut webhook,
+  collector-invocation wrapper with the exact missing-row set, GB200
+  time for validator repro. Vague asks like "better tooling" get
+  ignored.
