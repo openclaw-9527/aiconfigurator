@@ -70,3 +70,15 @@ Concise notes from prior autofix runs. Read before starting.
 11. **Re-ping comments should include a one-paragraph context recap**
     naming the open reviewer questions, so the reviewer can resolve
     the thread in place without scrolling back through the history.
+12. **`wontfix` + "close when branch X exists" is a full short-circuit.**
+    If the prior `LOG.md` records an explicit human skip directive
+    (e.g. @Harrilee's *"do not fix here, close once `release/0.9.0`
+    exists"*), the entire next run collapses to: `gh api
+    repos/.../branches/release/X.Y.Z` → expect 404 → log and stop.
+    No re-diagnosis, no new comment, no re-ping, no re-assignment.
+    Only the gating condition matters; everything else is noise.
+13. **Open the run by reading prior `LOG.md` before touching code.**
+    Paused issues on re-runs should cite the prior conclusion (PR
+    number, directive verbatim, gate) and just re-verify the gate —
+    do not re-trace LFS history or re-run validator reproductions
+    that were already recorded.
