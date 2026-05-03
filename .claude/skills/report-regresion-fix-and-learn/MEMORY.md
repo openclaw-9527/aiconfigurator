@@ -50,3 +50,23 @@ Operational notes for this skill:
   collector-invocation wrapper with the exact missing-row set, GB200
   time for validator repro. Vague asks like "better tooling" get
   ignored.
+- **The slack script requires at least one issue entry even for paused
+  batches.** `payload.issues` cannot be empty — `--dry-run` rejects it.
+  For all-paused runs, still enumerate each paused issue with `prs: []`
+  and a description that cites the gate + prior PR number. Do not try to
+  bypass with an empty list.
+- **Verify PR URLs by API, not just HTTP 200.** `curl -o /dev/null -w
+  "%{http_code}"` returns 200 for closed/unmerged PRs too. If the report
+  needs to say "prior fix attempt closed unmerged," confirm with
+  `api.github.com/repos/.../pulls/<n>` and read `state`+`merged` — the
+  `LOG.md` claim alone isn't enough because the PR may have been
+  reopened or merged since the log was written.
+- **Cite `GITHUB_RUN_ID` from env, never from conversation context.**
+  Today the env had `25283553991`; pasting any older ID from memory or a
+  prior `notification.json` silently links the Slack header to the wrong
+  workflow run. Always re-read `$GITHUB_RUN_ID` at the start of the run.
+- **For all-paused batches, list the PIC as the directive-giver (e.g.
+  @Harrilee), not the original data owner.** The action item is
+  "close when `release/0.9.0` is cut," which only the directive-giver
+  can green-light. Adding the original data contributor as PIC just
+  creates noise for someone who can't act on the gate.
