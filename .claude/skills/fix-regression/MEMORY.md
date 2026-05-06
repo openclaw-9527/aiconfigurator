@@ -82,3 +82,9 @@ Concise notes from prior autofix runs. Read before starting.
     number, directive verbatim, gate) and just re-verify the gate —
     do not re-trace LFS history or re-run validator reproductions
     that were already recorded.
+14. **An AI-authored acknowledgement of a human skip directive
+    (e.g. "Acknowledged, @X — skipping per your directive") is itself
+    the paused state.** Do NOT treat it as stale autofix activity
+    needing a re-ping. The thread is correctly parked on human action
+    (e.g. cutting `release/0.9.0`); additional automated comments add
+    noise and confuse the thread.

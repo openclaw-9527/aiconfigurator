@@ -50,3 +50,12 @@ Operational notes for this skill:
   collector-invocation wrapper with the exact missing-row set, GB200
   time for validator repro. Vague asks like "better tooling" get
   ignored.
+- **When every issue in the batch is paused on the same gate, state
+  that once up-front in REPORT.md** and have each per-issue
+  `description` only carry the issue-specific delta (which PR is
+  closed, what the root-cause summary was). Repeating the gate
+  verbatim per-issue bloats the Slack thread without adding signal.
+- **`notification.json` is still worth emitting on zero-update runs
+  as an audit artifact** — the dry-run catches schema drift between
+  live runs, and the file is a readable record of "we considered
+  posting, here is what it would have said."
