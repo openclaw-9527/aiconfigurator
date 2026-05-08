@@ -50,3 +50,18 @@ Operational notes for this skill:
   collector-invocation wrapper with the exact missing-row set, GB200
   time for validator repro. Vague asks like "better tooling" get
   ignored.
+- **When every child in the batch reports the same external gate, call
+  it out once at the batch level.** If all `LOG.md` files cite the
+  same gating condition (e.g. `release/0.9.0` branch doesn't exist),
+  the `REPORT.md` summary and the "How Can I Do Better" section
+  should name the shared gate and propose a batch-level
+  short-circuit (check gate once before fanning out, or a webhook on
+  the gate flipping) rather than repeating it per-issue. Each child
+  still runs its own `gh api` check — the ask is about the next
+  iteration of the workflow, not this one.
+- **Skip per-skill MEMORY updates when every child LOG.md explicitly
+  says "no update needed".** If the LOG.md authors for `fix-regression`
+  (or any skill) conclude "existing guidance covered this case
+  end-to-end", trust that assessment — don't restate lessons #12/#13
+  back into the same memory file. Only add a new lesson when this run
+  exposed a pattern the prior memory didn't capture.
