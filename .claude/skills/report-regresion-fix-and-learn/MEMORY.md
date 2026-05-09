@@ -50,3 +50,13 @@ Operational notes for this skill:
   collector-invocation wrapper with the exact missing-row set, GB200
   time for validator repro. Vague asks like "better tooling" get
   ignored.
+- **Paused-run `notification.json` is an audit artifact, not dead
+  weight.** Even when the Slack post is suppressed, always `--dry-run`
+  the JSON and leave the file on disk. The next live run can diff
+  against it to notice PIC email / issue URL / directive-text drift
+  without needing to re-read the original LOG.md batch.
+- **`REPORT.md` should link the Actions run explicitly.** The skill
+  knows `GITHUB_RUN_ID` + `GITHUB_REPOSITORY`; putting
+  `https://github.com/<repo>/actions/runs/<id>` at the top of the
+  report saves the reviewer one hop and mirrors what Slack already
+  does with the `[<run_id>]` title link.

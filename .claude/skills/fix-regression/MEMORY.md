@@ -82,3 +82,10 @@ Concise notes from prior autofix runs. Read before starting.
     number, directive verbatim, gate) and just re-verify the gate —
     do not re-trace LFS history or re-run validator reproductions
     that were already recorded.
+14. **When `release/0.9.0` is eventually cut, issues #62/#63 close via
+    a deletion cherry-pick, not a data restore.** `main` resolved both
+    regressions by deleting `gb200/trtllm/1.2.0rc6/` entirely (PR #886).
+    The correct action at branch-cut time is to propose the same
+    deletion on the new release branch — not to resurrect the
+    pre-#680 perf data. Any restore PR (the pattern in closed
+    #64/#66) is the wrong template for the close-out.
