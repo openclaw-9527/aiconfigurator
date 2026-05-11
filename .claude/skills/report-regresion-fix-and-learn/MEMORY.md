@@ -50,3 +50,15 @@ Operational notes for this skill:
   collector-invocation wrapper with the exact missing-row set, GB200
   time for validator repro. Vague asks like "better tooling" get
   ignored.
+- **Multi-issue paused-gate runs share one gate.** When every LOG.md
+  is waiting on the same gating branch (e.g. `release/0.9.0`), the
+  REPORT summary should state the gate once and list affected issues
+  in a compact table rather than repeating the gate diagnosis per
+  issue. The table should carry: issue #, prior fix PR #, PR state,
+  gate. That is the full actionable payload.
+- **`notification.json` per-issue `pic` can be GitHub handles, not
+  emails, when emails aren't recorded.** `slack_notification.py`
+  passes unresolved handles through as `cc <handle>` text — good
+  enough for visibility when the fork PICs aren't in the Slack
+  email directory. Don't fabricate nvidia.com emails for fork
+  collaborators.

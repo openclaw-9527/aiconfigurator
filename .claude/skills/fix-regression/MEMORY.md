@@ -82,3 +82,8 @@ Concise notes from prior autofix runs. Read before starting.
     number, directive verbatim, gate) and just re-verify the gate —
     do not re-trace LFS history or re-run validator reproductions
     that were already recorded.
+14. **Paused-run `LOG.md` should be ~15 lines: description, prior PR #
+    + state, directive quote, gate check command + result, one-line
+    actions-done ("no new action this run"), and lessons. Anything
+    longer re-bloats the thread and slows the next re-run's memory
+    read.
